@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INNOVA · Proyección Presupuestal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#F5F3EE;--surface:#FFF;--surface2:#EEECE7;
+    --border:#D8D4CC;--border-l:#E8E5DF;
+    --text:#1A1814;--text2:#5C5850;--text3:#9C9890;
+    --purple:#4A3FA0;--purple-l:#EAE8F8;--purple-m:#7B74CC;
+    --teal:#0F6E56;--teal-l:#E1F5EE;
+    --green:#2D6A1F;--green-l:#EAF3DE;
+    --red:#A32D2D;--red-l:#FCEBEB;
+    --warn:#B86000;--warn-l:#FFF3E0;
+    --r:12px;--rs:8px;
+  }
+  body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
+
+  /* LOADING */
+  #overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+  .spin{width:30px;height:30px;border:2px solid var(--border);border-top-color:var(--purple-m);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .load-txt{font-size:12px;color:var(--text3)}
+
+  /* CONFIG BANNER */
+  #cfg{background:#FFF3E0;border-bottom:0.5px solid #F5C76B;padding:10px 32px;font-size:12px;color:var(--warn);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  #cfg input{flex:1;font-family:'DM Mono',monospace;font-size:12px;padding:5px 10px;border:0.5px solid #F5C76B;border-radius:6px;background:#FFFBF5;color:var(--text);outline:none;max-width:520px}
+  #cfg button{font-family:'DM Mono',monospace;font-size:11px;padding:5px 14px;background:var(--warn);color:#fff;border:none;border-radius:6px;cursor:pointer}
+
+  /* HEADER */
+  .hdr{background:var(--text);color:var(--bg);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .logo{font-family:'Fraunces',serif;font-size:22px;font-weight:600;letter-spacing:-.5px}
+  .logo span{color:#B8B0F8}
+  .hdr-sub{font-size:11px;color:#9C9890;letter-spacing:.06em;text-transform:uppercase}
+  .hdr-l{display:flex;align-items:baseline;gap:14px}
+  .hdr-r{display:flex;align-items:center;gap:10px}
+  .area-sel{background:#2C2A26;border:0.5px solid #444;color:var(--bg);font-family:'DM Mono',monospace;font-size:12px;padding:6px 12px;border-radius:var(--rs);cursor:pointer;outline:none}
+  .rbadge{font-size:10px;padding:4px 10px;border-radius:20px;font-weight:500;text-transform:uppercase}
+  .rd{background:#B8B0F8;color:#1A1814}.rf{background:#9FE1CB;color:#0A3D2E}
+  #syncTxt{font-size:10px;color:#9C9890}
+
+  /* TABS */
+  .tabs{background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 32px;display:flex;overflow-x:auto}
+  .tab{font-family:'DM Mono',monospace;font-size:12px;padding:14px 20px;border:none;background:none;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+  .tab:hover{color:var(--text2)}.tab.active{color:var(--text);border-bottom-color:var(--text)}
+
+  /* MAIN */
+  .main{padding:24px 32px;max-width:1200px;margin:0 auto}
+  .panel{display:none}.panel.active{display:block}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .kpi{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px}
+  .kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px}
+  .kpi-val{font-family:'Fraunces',serif;font-size:26px;font-weight:300;line-height:1;margin-bottom:4px}
+  .kpi-sub{font-size:11px;color:var(--text3)}
+  .ok{color:var(--green)}.warn{color:var(--warn)}.danger{color:var(--red)}
+
+  /* SECTION */
+  .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .sec-title{font-family:'Fraunces',serif;font-size:17px;font-weight:600}
+  .sec-meta{font-size:11px;color:var(--text3)}
+
+  /* ORDEN SEARCH */
+  .search-bar{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .search-bar input,.search-bar select{font-family:'DM Mono',monospace;font-size:12px;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s}
+  .search-bar input:focus,.search-bar select:focus{border-color:var(--purple-m)}
+  .search-bar input{flex:1;min-width:160px}
+
+  /* ORDENES LIST */
+  .ordenes-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+  .ordenes-wrap table{width:100%;border-collapse:collapse;min-width:700px}
+  .ordenes-wrap thead tr{background:var(--surface2)}
+  .ordenes-wrap th{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:10px 14px;text-align:left;border-bottom:0.5px solid var(--border);white-space:nowrap}
+  .ordenes-wrap th:last-child{text-align:center}
+  .ordenes-wrap td{padding:10px 14px;font-size:12px;color:var(--text2);border-bottom:0.5px solid var(--border-l)}
+  .ordenes-wrap tr:last-child td{border-bottom:none}
+  .ordenes-wrap tr:hover td{background:var(--bg)}
+  .ord-code{font-weight:500;color:var(--text);font-family:'DM Mono',monospace;font-size:11px}
+  .ord-desc{color:var(--text2)}
+  .num-pos{color:var(--green)}.num-neg{color:var(--red)}.num-warn{color:var(--warn)}
+
+  /* EDIT MODAL */
+  #editPanel{background:var(--surface);border:1.5px solid var(--purple-m);border-radius:var(--r);padding:20px 24px;margin-bottom:20px;display:none}
+  .ep-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .ep-code{font-size:11px;font-family:'DM Mono',monospace;color:var(--purple);background:var(--purple-l);padding:3px 10px;border-radius:20px;font-weight:500}
+  .ep-desc{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--text);margin-top:4px}
+  .ep-area{font-size:11px;color:var(--text3)}
+  .ep-close{background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;padding:0 4px;line-height:1}
+  .ep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  .ep-field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:5px}
+  .ep-field input,.ep-field select{width:100%;font-family:'DM Mono',monospace;font-size:13px;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s}
+  .ep-field input:focus,.ep-field select:focus{border-color:var(--purple-m)}
+  .ep-field input[readonly]{color:var(--text3);cursor:default}
+  .alert{border-radius:var(--rs);padding:10px 14px;font-size:12px;margin-bottom:14px;display:none;line-height:1.5}
+  .a-warn{background:var(--warn-l);color:var(--warn);border:0.5px solid #F5C76B;display:block}
+  .a-ok{background:var(--green-l);color:var(--green);border:0.5px solid #97C459;display:block}
+  .a-err{background:var(--red-l);color:var(--red);border:0.5px solid #F09595;display:block}
+  .btn{font-family:'DM Mono',monospace;font-size:12px;padding:8px 18px;border-radius:var(--rs);border:0.5px solid var(--border);cursor:pointer;transition:all .15s}
+  .btn-p{background:var(--text);color:var(--bg);border-color:var(--text)}.btn-p:hover{background:#2C2A26}.btn-p:disabled{opacity:.5;cursor:not-allowed}
+  .btn-s{background:var(--surface);color:var(--text2)}.btn-s:hover{background:var(--surface2)}
+  .btn-edit{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;border-radius:var(--rs);border:0.5px solid var(--purple-m);background:var(--purple-l);color:var(--purple);cursor:pointer;transition:all .15s;white-space:nowrap}
+  .btn-edit:hover{background:var(--purple-m);color:#fff}
+
+  /* PROGRESS */
+  .prog{background:var(--border-l);border-radius:4px;height:6px;overflow:hidden;margin-top:5px}
+  .prog-b{height:100%;border-radius:4px;transition:width .4s}
+  .pg{background:var(--teal)}.pw{background:var(--warn)}.pr{background:var(--red)}.pp{background:var(--purple-m)}
+
+  /* BADGES */
+  .bp{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+  .bp-g{background:var(--green-l);color:var(--green)}
+  .bp-r{background:var(--red-l);color:var(--red)}
+  .bp-w{background:var(--warn-l);color:var(--warn)}
+  .bp-gray{background:var(--surface2);color:var(--text3)}
+  .bp-p{background:var(--purple-l);color:var(--purple)}
+
+  /* HIST */
+  .hist{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:24px;overflow-x:auto}
+  .hist table{width:100%;border-collapse:collapse;min-width:600px}
+  .hist th{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:10px 14px;background:var(--surface2);border-bottom:0.5px solid var(--border)}
+  .hist td{padding:9px 14px;font-size:12px;color:var(--text2);border-bottom:0.5px solid var(--border-l)}
+  .hist tr:last-child td{border-bottom:none}
+
+  /* CONSOLIDADO */
+  .areas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+  .ac{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px}
+  .ac-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+  .ac-name{font-size:13px;font-weight:500}
+  .ac-pct{font-family:'Fraunces',serif;font-size:22px;font-weight:300}
+  .tbl{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;overflow-x:auto;margin-bottom:24px}
+  .tbl table{width:100%;border-collapse:collapse;min-width:700px}
+  .tbl thead tr{background:var(--surface2)}
+  .tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:10px 14px;text-align:right;border-bottom:0.5px solid var(--border);white-space:nowrap}
+  .tbl th:first-child{text-align:left}
+  .tbl td{padding:10px 14px;text-align:right;border-bottom:0.5px solid var(--border-l);font-size:12px;color:var(--text2)}
+  .tbl td:first-child{text-align:left;font-weight:500;color:var(--text)}
+  .tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:var(--bg)}
+  .tbl tr.tot td{background:var(--surface2);font-weight:500;color:var(--text);border-top:0.5px solid var(--border)}
+
+  @media(max-width:768px){
+    .main{padding:16px}.hdr{padding:14px 16px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .ep-grid{grid-template-columns:1fr}
+    .areas-grid{grid-template-columns:1fr}
+    #cfg{padding:10px 16px}
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="spin"></div>
+  <div class="load-txt" id="loadTxt">Iniciando...</div>
+</div>
+
+<div id="cfg">
+  <span>⚙ URL del Apps Script:</span>
+  <input id="urlInp" placeholder="https://script.google.com/macros/s/XXXXXX/exec">
+  <button onclick="conectar()">Conectar</button>
+</div>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="logo">INN<span>OVA</span></div>
+    <div class="hdr-sub">Proyección presupuestal</div>
+  </div>
+  <div class="hdr-r">
+    <select class="area-sel" id="areaSel" onchange="switchArea()">
+      <option>Finanzas</option>
+      <option>Marketing</option>
+      <option>Proyectos</option>
+      <option>Talento Humano</option>
+      <option>Logística</option>
+    </select>
+    <div class="rbadge rf" id="roleBadge">Finanzas</div>
+    <div id="syncTxt"></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('ordenes',this)">Mis órdenes</button>
+  <button class="tab" onclick="switchTab('historial',this)">Historial</button>
+  <button class="tab" id="tabConsolid" onclick="switchTab('consolidado',this)">Consolidado</button>
+</div>
+
+<div class="main">
+
+  <!-- ── PANEL ÓRDENES ── -->
+  <div class="panel active" id="panel-ordenes">
+
+    <div class="kpis" id="kpiRow"></div>
+
+    <!-- Panel de edición de orden -->
+    <div id="editPanel">
+      <div class="ep-head">
+        <div>
+          <div><span class="ep-code" id="epCode"></span> <span class="ep-area" id="epArea"></span></div>
+          <div class="ep-desc" id="epDesc"></div>
+        </div>
+        <button class="ep-close" onclick="cerrarEdit()">✕</button>
+      </div>
+      <div class="ep-grid">
+        <div class="ep-field">
+          <label>Mes a proyectar</label>
+          <select id="epMes" onchange="recalcEdit()">
+            <option value="4">Mayo</option><option value="5">Junio</option>
+            <option value="6">Julio</option><option value="7">Agosto</option>
+            <option value="8">Setiembre</option><option value="9">Octubre</option>
+            <option value="10">Noviembre</option><option value="11">Diciembre</option>
+          </select>
+        </div>
+        <div class="ep-field">
+          <label>Monto proyectado (S/)</label>
+          <input type="number" id="epMonto" placeholder="0" min="0" step="1" oninput="recalcEdit()">
+        </div>
+        <div class="ep-field">
+          <label>PptoFin disponible</label>
+          <input id="epPptoFin" readonly>
+        </div>
+        <div class="ep-field">
+          <label>Ejecutado del mes</label>
+          <input id="epEjec" readonly>
+        </div>
+        <div class="ep-field">
+          <label>Proyectado actual</label>
+          <input id="epPrActual" readonly>
+        </div>
+        <div class="ep-field">
+          <label>Holgura</label>
+          <input id="epHolgura" readonly>
+        </div>
+      </div>
+      <div class="alert" id="epAlert"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-p" id="btnGuardar" onclick="guardar()">Guardar en Google Sheets</button>
+        <button class="btn btn-s" onclick="cerrarEdit()">Cancelar</button>
+        <span style="font-size:11px;color:var(--text3)" id="saveMsg"></span>
+      </div>
+    </div>
+
+    <!-- Buscador -->
+    <div class="search-bar">
+      <input id="buscar" placeholder="Buscar por código o descripción..." oninput="filtrarOrdenes()">
+      <select id="filtroTipo" onchange="filtrarOrdenes()">
+        <option value="">Todos los tipos</option>
+        <option value="Gasto">Gasto</option>
+        <option value="Inversión">Inversión</option>
+      </select>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-title">Órdenes del área</div>
+      <div class="sec-meta" id="secMeta"></div>
+    </div>
+
+    <div class="ordenes-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Descripción</th>
+            <th>Tipo</th>
+            <th>PptoFin mes sel.</th>
+            <th>Proyectado</th>
+            <th>Ejecutado</th>
+            <th>Avance %</th>
+            <th>Estado</th>
+            <th style="text-align:center">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tbOrdenes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PANEL HISTORIAL ── -->
+  <div class="panel" id="panel-historial">
+    <div class="sec-head">
+      <div class="sec-title">Historial de proyecciones</div>
+      <div class="sec-meta">Cambios registrados en esta sesión</div>
+    </div>
+    <div class="hist">
+      <table>
+        <thead><tr>
+          <th>Hora</th><th>Orden</th><th>Descripción</th><th>Mes</th>
+          <th>Proyectado</th><th>PptoFin</th><th>Holgura</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="tbHist"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PANEL CONSOLIDADO ── -->
+  <div class="panel" id="panel-consolidado">
+    <div class="sec-head">
+      <div class="sec-title">Vista consolidada — todas las áreas</div>
+      <div class="sec-meta">Solo Finanzas</div>
+    </div>
+    <div class="areas-grid" id="areasGrid"></div>
+    <div class="sec-head"><div class="sec-title">Resumen por área</div></div>
+    <div class="tbl">
+      <table>
+        <thead><tr>
+          <th>Área</th><th>PptoFin anual</th><th>Proyectado acum.</th>
+          <th>Ejecutado acum.</th><th>Avance %</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="tbConsolid"></tbody>
+        <tfoot><tr class="tot" id="rowTot"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────
+let SCRIPT_URL = localStorage.getItem('innova_url') || '';
+const MESES    = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+const MES_ACT  = 3; // Abril
+
+const state = {
+  area: 'Finanzas',
+  ordenes: [],          // órdenes del área actual (desde Sheets)
+  allRows: [],          // todas las filas (para consolidado)
+  historial: [],        // guardados en sesión
+  ordenEdit: null,      // orden seleccionada para editar
+};
+
+// ── INIT ─────────────────────────────────────────────────────
+window.onload = () => {
+  if (SCRIPT_URL) {
+    document.getElementById('cfg').style.display = 'none';
+    document.getElementById('urlInp').value = SCRIPT_URL;
+    cargarDatos();
+  } else {
+    hide();
+  }
+};
+
+function conectar() {
+  const v = document.getElementById('urlInp').value.trim();
+  if (!v.startsWith('https://script.google.com')) {
+    alert('URL inválida'); return;
+  }
+  SCRIPT_URL = v;
+  localStorage.setItem('innova_url', SCRIPT_URL);
+  document.getElementById('cfg').style.display = 'none';
+  cargarDatos();
+}
+
+// ── FETCH ────────────────────────────────────────────────────
+async function api(action, extra = '') {
+  const r = await fetch(SCRIPT_URL + '?action=' + action + extra);
+  return r.json();
+}
+async function post(body) {
+  const r = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(body) });
+  return r.json();
+}
+
+// ── CARGA ────────────────────────────────────────────────────
+async function cargarDatos() {
+  show('Conectando con PPTO 2026...');
+  try {
+    const [rAll, rArea] = await Promise.all([
+      api('getDatos'),
+      api('getOrdenesByArea', '&area=' + encodeURIComponent(state.area))
+    ]);
+    if (!rAll.ok)  throw new Error(rAll.error);
+    if (!rArea.ok) throw new Error(rArea.error);
+    state.allRows = rAll.rows;
+    state.ordenes = rArea.ordenes;
+    setSyncTxt('✓ ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setSyncTxt('⚠ Sin conexión');
+    state.ordenes = [];
+    state.allRows = [];
+  }
+  hide();
+  renderAll();
+}
+
+async function cargarArea() {
+  show('Cargando órdenes...');
+  try {
+    const r = await api('getOrdenesByArea', '&area=' + encodeURIComponent(state.area));
+    if (!r.ok) throw new Error(r.error);
+    state.ordenes = r.ordenes;
+    setSyncTxt('✓ ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) { setSyncTxt('⚠ ' + e.message); }
+  hide();
+  renderAll();
+}
+
+// ── UI HELPERS ───────────────────────────────────────────────
+function show(t) { document.getElementById('loadTxt').textContent = t; document.getElementById('overlay').style.display = 'flex'; }
+function hide()  { document.getElementById('overlay').style.display = 'none'; }
+function setSyncTxt(t) { document.getElementById('syncTxt').textContent = t; }
+function fmt(n)  { if(n==null||n===''||n===undefined) return '—'; return 'S/ ' + Math.round(Number(n)).toLocaleString('es-PE'); }
+function pct(a,b){ return b ? Math.round(a/b*100) : 0; }
+function getMesIdx() { return parseInt(document.getElementById('epMes')?.value ?? 4); }
+
+function switchArea() {
+  state.area = document.getElementById('areaSel').value;
+  const b = document.getElementById('roleBadge');
+  const tc = document.getElementById('tabConsolid');
+  if (state.area === 'Finanzas') { b.textContent='Finanzas'; b.className='rbadge rf'; tc.style.display=''; }
+  else { b.textContent='Director'; b.className='rbadge rd'; tc.style.display='none'; }
+  cerrarEdit();
+  cargarArea();
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el?.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  renderAll();
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────
+function renderAll() {
+  renderKPIs();
+  renderOrdenes();
+  renderHist();
+  renderConsolidado();
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  const mesIdx = getMesIdx();
+  const mes = MESES[mesIdx];
+  const ords = state.ordenes;
+
+  const pptoFin  = ords.reduce((s,o) => s + (parseFloat(o['PptoFin_'+mes])||0), 0);
+  const ejec     = ords.reduce((s,o) => s + (parseFloat(o['Ejecutado_'+mes])||0), 0);
+  const proy     = ords.reduce((s,o) => s + (parseFloat(o['Proyectado_'+mes])||0), 0);
+  const sinProy  = ords.filter(o => !o['Proyectado_'+mes] || o['Proyectado_'+mes]===0).length;
+  const av       = pct(ejec, pptoFin);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-lbl">PptoFin ${mes}</div>
+      <div class="kpi-val">${fmt(pptoFin)}</div>
+      <div class="kpi-sub">${ords.length} órdenes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Proyectado ${mes}</div>
+      <div class="kpi-val" style="color:var(--purple)">${proy>0?fmt(proy):'—'}</div>
+      <div class="kpi-sub">${sinProy > 0 ? sinProy+' sin proyectar' : '✓ todas proyectadas'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Ejecutado ${mes}</div>
+      <div class="kpi-val ${av>=90?'danger':av>=70?'warn':'ok'}">${fmt(ejec)}</div>
+      <div class="kpi-sub">${av}% del PptoFin</div>
+      <div class="prog"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Holgura ${mes}</div>
+      <div class="kpi-val ${(pptoFin-proy)<0?'danger':'ok'}">${fmt(pptoFin-proy)}</div>
+      <div class="kpi-sub">${proy>pptoFin?'⚠ proyectado supera ppto':'disponible'}</div>
+    </div>`;
+  document.getElementById('secMeta').textContent = state.area + ' · ' + mes + ' ' + new Date().getFullYear();
+}
+
+// ── TABLA DE ÓRDENES ─────────────────────────────────────────
+function filtrarOrdenes() { renderOrdenes(); }
+
+function renderOrdenes() {
+  const mesIdx = getMesIdx();
+  const mes    = MESES[mesIdx];
+  const busq   = document.getElementById('buscar')?.value?.toLowerCase() || '';
+  const tipo   = document.getElementById('filtroTipo')?.value || '';
+
+  let ords = state.ordenes;
+  if (busq) ords = ords.filter(o =>
+    String(o.orden).toLowerCase().includes(busq) ||
+    String(o.descripcion).toLowerCase().includes(busq)
+  );
+  if (tipo) ords = ords.filter(o => String(o['Gasto/Inver']||'').includes(tipo));
+
+  if (ords.length === 0) {
+    document.getElementById('tbOrdenes').innerHTML =
+      `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">${state.ordenes.length===0?'Sin órdenes cargadas para esta área.':'Sin resultados para la búsqueda.'}</td></tr>`;
+    return;
+  }
+
+  const rows = ords.map(o => {
+    const pF  = parseFloat(o['PptoFin_'+mes])||0;
+    const ej  = parseFloat(o['Ejecutado_'+mes])||0;
+    const pr  = parseFloat(o['Proyectado_'+mes])||0;
+    const av  = pct(ej, pF);
+    const badge = pr > 0
+      ? (pr > pF ? '<span class="bp bp-w">⚠ Supera</span>' : '<span class="bp bp-p">Proyectado</span>')
+      : '<span class="bp bp-gray">Sin proyectar</span>';
+    const isEditing = state.ordenEdit?.orden === o.orden;
+    return `<tr style="${isEditing?'background:var(--purple-l)':''}">
+      <td><span class="ord-code">${o.orden}</span></td>
+      <td class="ord-desc" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${o.descripcion}">${o.descripcion}</td>
+      <td><span class="bp ${String(o['Gasto/Inver']||'').includes('Inv')?'bp-p':'bp-gray'}">${o['Gasto/Inver']||'—'}</span></td>
+      <td class="num-neutral">${fmt(pF)}</td>
+      <td class="${pr>pF?'num-warn':pr>0?'num-neutral':''}">${pr>0?fmt(pr):'—'}</td>
+      <td>${ej>0?fmt(ej):'—'}</td>
+      <td>${av>0?`${av}%<div class="prog"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div>`:'—'}</td>
+      <td>${badge}</td>
+      <td style="text-align:center"><button class="btn-edit" onclick="abrirEdit(${JSON.stringify(o).replace(/"/g,'&quot;')})">Proyectar</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbOrdenes').innerHTML = rows;
+}
+
+// ── EDITAR ORDEN ─────────────────────────────────────────────
+function abrirEdit(o) {
+  state.ordenEdit = o;
+  document.getElementById('epCode').textContent    = o.orden;
+  document.getElementById('epDesc').textContent    = o.descripcion;
+  document.getElementById('epArea').textContent    = o.area;
+  document.getElementById('epAlert').className     = 'alert';
+  document.getElementById('epMonto').value         = '';
+  document.getElementById('editPanel').style.display = 'block';
+  document.getElementById('editPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  recalcEdit();
+}
+
+function cerrarEdit() {
+  state.ordenEdit = null;
+  document.getElementById('editPanel').style.display = 'none';
+}
+
+function recalcEdit() {
+  const o      = state.ordenEdit;
+  if (!o) return;
+  const mesIdx = getMesIdx();
+  const mes    = MESES[mesIdx];
+  const monto  = parseFloat(document.getElementById('epMonto').value) || 0;
+  const pF     = parseFloat(o['PptoFin_'+mes]) || 0;
+  const ej     = parseFloat(o['Ejecutado_'+mes]) || 0;
+  const prAct  = parseFloat(o['Proyectado_'+mes]) || 0;
+  const holgura = pF - monto;
+
+  document.getElementById('epPptoFin').value  = fmt(pF);
+  document.getElementById('epEjec').value     = ej > 0 ? fmt(ej) : '—';
+  document.getElementById('epPrActual').value = prAct > 0 ? fmt(prAct) : '—';
+  document.getElementById('epHolgura').value  = monto > 0 ? fmt(holgura) : '—';
+
+  const al = document.getElementById('epAlert');
+  if (monto > 0) {
+    if (monto > pF) {
+      al.className = 'alert a-warn';
+      al.textContent = '⚠ La proyección (' + fmt(monto) + ') supera el PptoFin (' + fmt(pF) + ') en ' + fmt(monto-pF) + '. Se guardará con advertencia en Sheets.';
+    } else if (monto > pF * 0.9) {
+      al.className = 'alert a-warn';
+      al.textContent = '⚠ Usas el ' + pct(monto,pF) + '% del presupuesto disponible.';
+    } else {
+      al.className = 'alert a-ok';
+      al.textContent = '✓ Dentro del presupuesto. Holgura: ' + fmt(holgura) + '.';
+    }
+  } else { al.className = 'alert'; }
+
+  renderKPIs();
+  renderOrdenes();
+}
+
+// ── GUARDAR ──────────────────────────────────────────────────
+async function guardar() {
+  const o      = state.ordenEdit;
+  const monto  = parseFloat(document.getElementById('epMonto').value);
+  const mesIdx = getMesIdx();
+  const mes    = MESES[mesIdx];
+
+  if (!monto || monto <= 0) {
+    const al = document.getElementById('epAlert');
+    al.className = 'alert a-err'; al.textContent = '✕ Ingresa un monto válido mayor a 0.'; return;
+  }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true; btn.textContent = 'Guardando en Sheets...';
+
+  try {
+    if (SCRIPT_URL) {
+      const res = await post({ action:'saveProyeccion', orden: o.orden, mesIdx, proyectado: monto });
+      if (!res.ok) throw new Error(res.error);
+    }
+    // Actualizar estado local
+    o['Proyectado_'+mes] = monto;
+    const idx = state.ordenes.findIndex(x => x.orden === o.orden);
+    if (idx >= 0) state.ordenes[idx]['Proyectado_'+mes] = monto;
+
+    state.historial.unshift({
+      hora: new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}),
+      orden: o.orden, descripcion: o.descripcion, mes,
+      proyectado: monto,
+      pptoFin: parseFloat(o['PptoFin_'+mes])||0,
+      holgura: (parseFloat(o['PptoFin_'+mes])||0) - monto,
+      supera: monto > (parseFloat(o['PptoFin_'+mes])||0)
+    });
+
+    setSyncTxt('✓ Guardado ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));
+    document.getElementById('saveMsg').textContent = '✓ Guardado en PPTO 2026';
+    setTimeout(() => document.getElementById('saveMsg').textContent = '', 4000);
+    document.getElementById('epAlert').className = 'alert a-ok';
+    document.getElementById('epAlert').textContent = '✓ Proyectado_' + mes + ' actualizado en Google Sheets para orden ' + o.orden + '.';
+    renderAll();
+  } catch(err) {
+    document.getElementById('epAlert').className = 'alert a-err';
+    document.getElementById('epAlert').textContent = '✕ Error: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'Guardar en Google Sheets';
+}
+
+// ── HISTORIAL ────────────────────────────────────────────────
+function renderHist() {
+  document.getElementById('tbHist').innerHTML = state.historial.length === 0
+    ? '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Sin cambios en esta sesión</td></tr>'
+    : state.historial.map(h => `<tr>
+        <td style="color:var(--text3)">${h.hora}</td>
+        <td><span class="ord-code">${h.orden}</span></td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.descripcion}</td>
+        <td>${h.mes}</td>
+        <td>${fmt(h.proyectado)}</td>
+        <td>${fmt(h.pptoFin)}</td>
+        <td class="${h.holgura>=0?'num-pos':'num-neg'}">${fmt(h.holgura)}</td>
+        <td>${h.supera?'<span class="bp bp-w">⚠ Supera</span>':'<span class="bp bp-g">OK</span>'}</td>
+      </tr>`).join('');
+}
+
+// ── CONSOLIDADO ──────────────────────────────────────────────
+function renderConsolidado() {
+  const areas = [...new Set(state.allRows.map(r => r[Object.keys(r).find(k=>k==='Area')||'Area']))].filter(Boolean);
+  const mesIdx = getMesIdx();
+  const mes = MESES[mesIdx];
+
+  if (areas.length === 0) {
+    document.getElementById('areasGrid').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:16px">Sin datos consolidados. Conecta la app a Google Sheets.</div>';
+    document.getElementById('tbConsolid').innerHTML = '';
+    return;
+  }
+
+  let tP=0, tPr=0, tE=0;
+  const cards = areas.map(area => {
+    const rows = state.allRows.filter(r => String(r['Area']).trim() === String(area).trim());
+    const pF   = rows.reduce((s,r)=>s+(parseFloat(r['PptoFin_'+mes])||0),0);
+    const ej   = rows.reduce((s,r)=>s+(parseFloat(r['Ejecutado_'+mes])||0),0);
+    const pr   = rows.reduce((s,r)=>s+(parseFloat(r['Proyectado_'+mes])||0),0);
+    const av   = pct(ej,pF);
+    tP+=pF; tPr+=pr; tE+=ej;
+    return `<div class="ac">
+      <div class="ac-head">
+        <div class="ac-name">${area}</div>
+        <div class="ac-pct" style="color:${av>=90?'var(--red)':av>=70?'var(--warn)':'var(--green)'}">${av}%</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:5px">Avance ejecución ${mes}</div>
+      <div class="prog" style="margin-bottom:12px"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">PptoFin</div><div style="font-size:12px">${fmt(pF)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ejecutado</div><div style="font-size:12px">${fmt(ej)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Proyectado</div><div style="font-size:12px;color:var(--purple)">${pr>0?fmt(pr):'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Holgura</div><div style="font-size:12px;color:var(--green)">${fmt(pF-pr)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('areasGrid').innerHTML = cards;
+
+  const rows2 = areas.map(area => {
+    const rows = state.allRows.filter(r => String(r['Area']).trim() === String(area).trim());
+    const pF = rows.reduce((s,r)=>s+(parseFloat(r['PptoFin_'+mes])||0),0);
+    const ej = rows.reduce((s,r)=>s+(parseFloat(r['Ejecutado_'+mes])||0),0);
+    const pr = rows.reduce((s,r)=>s+(parseFloat(r['Proyectado_'+mes])||0),0);
+    const av = pct(ej,pF);
+    return `<tr>
+      <td>${area}</td>
+      <td style="text-align:right">${fmt(pF)}</td>
+      <td style="text-align:right;color:var(--purple)">${pr>0?fmt(pr):'—'}</td>
+      <td style="text-align:right">${fmt(ej)}</td>
+      <td style="text-align:right">${av}%<div class="prog"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div></td>
+      <td style="text-align:right">${pr>pF?'<span class="bp bp-w">⚠ Supera</span>':av>=90?'<span class="bp bp-r">Crítico</span>':av>=70?'<span class="bp bp-w">Alerta</span>':'<span class="bp bp-g">Normal</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbConsolid').innerHTML = rows2;
+  document.getElementById('rowTot').innerHTML = `
+    <td>TOTAL INNOVA</td>
+    <td style="text-align:right">${fmt(tP)}</td>
+    <td style="text-align:right;color:var(--purple)">${fmt(tPr)}</td>
+    <td style="text-align:right">${fmt(tE)}</td>
+    <td style="text-align:right">${pct(tE,tP)}%</td>
+    <td></td>`;
+}
+</script>
+</body>
+</html>
