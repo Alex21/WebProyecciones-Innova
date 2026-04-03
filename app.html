@@ -77,7 +77,6 @@
   .search-bar input{flex:1;min-width:160px}
 
   /* TABLE */
-  <button onclick="nuevaOrden()" class="btn">➕ Nueva Orden</button>
   .ordenes-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;overflow-x:auto}
   .ordenes-wrap table{width:100%;border-collapse:collapse;min-width:700px}
   .ordenes-wrap thead tr{background:var(--navy)}
@@ -265,7 +264,9 @@
       <div class="sec-title">Órdenes del área</div>
       <div class="sec-meta" id="secMeta"></div>
     </div>
-
+    <button onclick="nuevaOrden()" class="btn btn-p" style="margin-bottom:10px">
+  	➕ Nueva Orden
+    </button>
     <div class="ordenes-wrap">
       <table>
         <thead><tr>
@@ -467,9 +468,6 @@ function renderOrdenes(){
 
   if(ords.length===0){
     document.getElementById('tbOrdenes').innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">${state.ordenes.length===0?'Sin órdenes para esta área.':'Sin resultados.'}</td></tr>`;
-    return;
-<button onclick="ejecutarOrden('${o.orden}')">💰 Ejecutar</button>
-  }
 async function ejecutarOrden(codigo) {
   const mes = state.mesIdx;
 
@@ -507,7 +505,12 @@ async function ejecutarOrden(codigo) {
       <td>${ej>0?fmt(ej):'—'}</td>
       <td>${av>0?`${av}%<div class="prog"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div>`:'—'}</td>
       <td>${badge}</td>
-      <td style="text-align:center">${canEdit?`<button class="btn-edit" onclick='abrirEdit(${JSON.stringify(o).replace(/'/g,"&#39;")})'>Proyectar</button>`:'<span style="color:var(--text3);font-size:11px">Ver</span>'}</td>
+  <td style="text-align:center">
+  ${canEdit ? `
+    <button class="btn-edit" onclick='abrirEdit(${JSON.stringify(o).replace(/'/g,"&#39;")})'>Proyectar</button>
+    <button class="btn-edit" onclick="ejecutarOrden('${o.orden}')">💰 Ejecutar</button>
+  ` : '<span style="color:var(--text3);font-size:11px">Ver</span>'}
+  </td>
     </tr>`;
   }).join('');
 }
