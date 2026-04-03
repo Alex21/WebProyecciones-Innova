@@ -586,29 +586,35 @@ async function guardar(){
   btn.disabled=false;btn.textContent='Guardar en Google Sheets';
 }
 async function nuevaOrden() {
-  const desc = prompt("Descripción de la orden");
-  const tipo = prompt("Tipo: Gasto o Inversión");
-  const responsable = prompt("Responsable de pago");
-  const monto = prompt("Monto");
-  const mes = state.mesIdx; // usa el mes actual de tu app
+  const tipo = document.getElementById('tipoOrden').value;
+  const desc = document.getElementById('descOrden').value;
+  const responsable = document.getElementById('respOrden').value;
+  const monto = document.getElementById('montoOrden').value;
+  
+  // IMPORTANTE: Usamos el estado global de la app
+  const mes = state.mesIdx; 
+  const areaActual = state.area; 
 
-  if (!desc || !tipo || !monto) {
-    alert("Completa los datos");
-    return;
-  }
+  if(!desc || !monto) return alert("Por favor llena descripción y monto.");
 
   try {
-    const res = await api('crearOrden',
-      `&email=test@empresa.com&tipo=${tipo}&desc=${desc}&responsable=${responsable}&monto=${monto}&mes=${mes}`
+    // Agregamos el parámetro &area=${areaActual} para que no use la del login del usuario
+    const res = await api('crearOrden', 
+      `&email=${state.user.email}&tipo=${tipo}&desc=${desc}&responsable=${responsable}&monto=${monto}&mes=${mes}&area=${areaActual}`
     );
 
-    if (!res.codigo) throw new Error(res.error || "Error");
-
-    alert("Orden creada: " + res.codigo);
-
-    cargarDatos(); // recarga todo
+    if (res.ok) {
+      alert("Orden " + res.codigo + " creada exitosamente.");
+      // Cerramos el modal si tienes uno
+      // modalNuevaOrden.style.display = 'none'; 
+      
+      // RECARGAMOS LOS DATOS PARA VER LA ORDEN EN LA TABLA
+      await cargarDatos(); 
+    } else {
+      alert("Error al crear: " + res.error);
+    }
   } catch (e) {
-    alert("Error: " + e.message);
+    alert("Error de conexión con el servidor");
   }
 }
 function renderHist(){
