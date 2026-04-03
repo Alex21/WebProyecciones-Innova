@@ -317,12 +317,12 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_IMwk7mxSyLq9LfORSyMu5W2oxicAxg_kAXFZaMfAwry7IVvAXtQwLFGHG_sR4UBG/exec"
 const MESES   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
 const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
 const AREAS   = ['Finanzas','Marketing','Talento Humano','Proyectos'];
 
-let SCRIPT_URL = localStorage.getItem('innova_url') || '';
+let SCRIPT_URL = localStorage.getItem('innova_url') || "https://script.google.com/macros/s/AKfycby_IMwk7mxSyLq9LfORSyMu5W2oxicAxg_kAXFZaMfAwry7IVvAXtQwLFGHG_sR4UBG/exec
+
 
 const state = {
   area:'Finanzas', mesIdx:4,
@@ -343,17 +343,15 @@ function conectar() {
   cargarDatos();
 }
 
-async function api(action, extra = '') {
-  try {
-    // Es muy importante que diga SCRIPT_URL + "?action="
-    const response = await fetch(SCRIPT_URL + "?action=" + action + extra);
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Error de conexión con el Excel");
-  }
+async function api(action, extra='') {
+  const r = await fetch(SCRIPT_URL+'?action='+action+extra);
+  return r.json();
 }
+async function post(body) {
+  const r = await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(body)});
+  return r.json();
+}
+
 async function cargarDatos() {
   show('Conectando con PPTO 2026...');
   try {
@@ -461,45 +459,45 @@ function renderKPIs(){
   document.getElementById('consolMeta').textContent='Mes: '+(mesIdx===-1?'Anualizado':MESES_L[mesIdx]);
 }
 
-function renderOrdenes(){
-  const mesIdx=state.mesIdx;
-  const busq=document.getElementById('buscar')?.value?.toLowerCase()||'';
-  const tipo=document.getElementById('filtroTipo')?.value||'';
-  let ords=state.ordenes;
-  if(busq) ords=ords.filter(o=>String(o.orden).toLowerCase().includes(busq)||String(o.descripcion).toLowerCase().includes(busq));
-  if(tipo) ords=ords.filter(o=>String(o['Gasto/Inversión']||'').includes(tipo));
+function renderOrdenes() {
+  const mesesArr = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+  const nombreMes = mesesArr[state.mesIdx]; // Saca "Ene", "Feb", etc.
 
-  if(ords.length===0){
-    document.getElementById('tbOrdenes').innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">${state.ordenes.length===0?'Sin órdenes para esta área.':'Sin resultados.'}</td></tr>`;
-    return;//
+  // Filtramos por el área seleccionada
+  const ords = state.ordenes.filter(o => o.Area === state.area);
+
+  const container = document.getElementById('tbOrdenes');
+  if (!container) return;
+
+  if (ords.length === 0) {
+    container.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">${state.ordenes.length === 0 ? 'Cargando datos...' : 'Sin órdenes para esta área.'}</td></tr>`;
+    return;
   }
 
-  document.getElementById('tbOrdenes').innerHTML=ords.map(o=>{
-    const pF=getVal(o,'PptoFin_',mesIdx);
-    const ej=getVal(o,'Ejecutado_',mesIdx);
-    const pr=getVal(o,'Proyectado_',mesIdx);
-    const av=pct(ej,pF);
-    const isEdit=state.ordenEdit?.orden===o.orden;
-    const badge=pr>0?(pr>pF?'<span class="bp bp-w">⚠ Supera</span>':'<span class="bp bp-navy">Proyectado</span>'):'<span class="bp bp-gray">Sin proyectar</span>';
-    const canEdit=mesIdx>=0;
-    return `<tr style="${isEdit?'background:var(--blue-soft)':''}">
-      <td><span class="ord-code">${o.orden}</span></td>
-      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${o.descripcion}">${o.descripcion||'—'}</td>
-      <td><span class="bp bp-gray">${o['Gasto/Inversión']||'—'}</span></td>
-      <td>${fmt(pF)}</td>
-      <td class="${pr>pF?'num-warn':pr>0?'':'num-neg'}">${pr>0?fmt(pr):'—'}</td>
-      <td>${ej>0?fmt(ej):'—'}</td>
-      <td>${av>0?`${av}%<div class="prog"><div class="prog-b ${av>=90?'pr':av>=70?'pw':'pg'}" style="width:${Math.min(av,100)}%"></div></div>`:'—'}</td>
-      <td>${badge}</td>
-  <td style="text-align:center">
-  ${canEdit ? `
-    <button class="btn-edit" onclick='abrirEdit(${JSON.stringify(o).replace(/'/g,"&#39;")})'>Proyectar</button>
-    <button class="btn-edit" onclick="ejecutarOrden('${o.orden}')">💰 Ejecutar</button>
-  ` : '<span style="color:var(--text3);font-size:11px">Ver</span>'}
-  </td>
-    </tr>`;
+  container.innerHTML = ords.map(o => {
+    // Buscamos la columna de Proyectado y Ejecutado según el mes
+    const valorProyectado = o['Proyectado_' + nombreMes] || 0;
+    const valorEjecutado = o['Ejecutado_' + nombreMes] || 0;
+
+    return `
+      <tr>
+        <td><strong>${o.Orden || '-'}</strong></td>
+        <td>${o.Descripcion_Orden || '-'}</td>
+        <td><span class="tag">${o['Gasto/Inversión'] || 'Gasto'}</span></td>
+        <td>${o.Responsable_De_Pago || '-'}</td>
+        <td>${fmt(o.Disponible || 0)}</td>
+        <td style="color:var(--navy-light);font-weight:600">${fmt(valorProyectado)}</td>
+        <td style="color:var(--green)">${fmt(valorEjecutado)}</td>
+        <td>
+          ${valorEjecutado > 0 
+            ? '<span style="color:var(--green)">✅ Ejecutado</span>' 
+            : `<button class="btn-ejecutar" onclick="ejecutarOrden('${o.Orden}')">Ejecutar</button>`
+          }
+        </td>
+      </tr>
+    `;
   }).join('');
-}
+}}
 async function ejecutarOrden(codigo) {
   const mes = state.mesIdx;
   if (!confirm("¿Seguro que deseas ejecutar esta orden?")) return;
@@ -589,38 +587,32 @@ async function guardar(){
   btn.disabled=false;btn.textContent='Guardar en Google Sheets';
 }
 async function nuevaOrden() {
-  const tipo = document.getElementById('tipoOrden').value;
-  const desc = document.getElementById('descOrden').value;
-  const responsable = document.getElementById('respOrden').value;
-  const monto = document.getElementById('montoOrden').value;
-  
-  // IMPORTANTE: Usamos el estado global de la app
-  const mes = state.mesIdx; 
-  const areaActual = state.area; 
+  const tipo = document.getElementById('filtroTipo').value; // Usamos el selector que ya tienes
+  const desc = prompt("Descripción de la nueva orden:");
+  const responsable = prompt("Nombre del responsable:");
+  const monto = prompt("Monto inicial (S/):");
 
-  if(!desc || !monto) return alert("Por favor llena descripción y monto.");
+  if(!desc || !monto) return alert("Datos incompletos");
 
   try {
-    // Agregamos el parámetro &area=${areaActual} para que no use la del login del usuario
+    show('Creando orden...');
+    // Eliminamos la referencia a state.user para que no de error
     const res = await api('crearOrden', 
-      `&email=${state.user.email}&tipo=${tipo}&desc=${desc}&responsable=${responsable}&monto=${monto}&mes=${mes}&area=${areaActual}`
+      `&tipo=${tipo}&desc=${encodeURIComponent(desc)}&responsable=${encodeURIComponent(responsable)}&monto=${monto}&mes=${state.mesIdx}&area=${encodeURIComponent(state.area)}`
     );
 
     if (res.ok) {
-      alert("Orden " + res.codigo + " creada exitosamente.");
-      // Cerramos el modal si tienes uno
-      // modalNuevaOrden.style.display = 'none'; 
-      
-      // RECARGAMOS LOS DATOS PARA VER LA ORDEN EN LA TABLA
-      await cargarDatos(); 
+      alert("Orden creada con éxito");
+      await cargarDatos(); // Esto actualiza la tabla automáticamente
     } else {
-      alert("Error al crear: " + res.error);
+      alert("Error: " + res.error);
     }
   } catch (e) {
-    alert("Error de conexión con el servidor");
+    alert("Error de conexión");
+  } finally {
+    hide();
   }
-}
-function renderHist(){
+}function renderHist(){
   document.getElementById('tbHist').innerHTML=state.historial.length===0
     ?'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Sin cambios en esta sesión</td></tr>'
     :state.historial.map(h=>`<tr>
