@@ -6,7 +6,7 @@
 <title>INNOVA · Proyección Presupuestal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600&display=swap" rel="stylesheet">
 <style>
-  /* MANTENEMOS TU ESTILO EXACTO */
+  /* --- ESTILOS ORIGINALES INTACTOS --- */
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --navy:#0D1F5C;--navy-dark:#091648;--navy-light:#1A3080;
@@ -86,10 +86,13 @@
       <label>Seleccionar Área</label>
       <select id="cfgArea">
         <option value="">Selecciona un área...</option>
+        <option value="Finanzas">Finanzas</option>
         <option value="Sistemas">Sistemas</option>
         <option value="Administración">Administración</option>
         <option value="Marketing">Marketing</option>
         <option value="Operaciones">Operaciones</option>
+        <option value="Proyectos">Proyectos</option>
+        <option value="Talento Humano">Talento Humano</option>
       </select>
     </div>
     <button class="btn-primary" style="width:100%;justify-content:center;" onclick="conectar()">Conectar al Presupuesto</button>
@@ -102,15 +105,16 @@
       <h1>INNOVA</h1>
       <p>Proyección Presupuestal</p>
     </div>
-    <nav>
-      <div class="nav-item active">Dashboard General</div>
-      <div class="nav-item">Órdenes de Gasto</div>
-      <div class="nav-item">Inversiones Capex</div>
-      <div class="nav-item">Reportes</div>
+    <nav id="menuNavegacion">
+      <div class="nav-item active" onclick="cambiarSeccion(this, 'Dashboard')">Dashboard General</div>
+      <div class="nav-item" onclick="cambiarSeccion(this, 'Ordenes de Gasto')">Órdenes de Gasto</div>
+      <div class="nav-item" onclick="cambiarSeccion(this, 'Inversiones Capex')">Inversiones Capex</div>
+      <div class="nav-item" onclick="cambiarSeccion(this, 'Reportes')">Reportes</div>
     </nav>
     <div style="margin-top:auto; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1)">
       <p style="font-size:10px; opacity:0.5; margin-bottom:10px">ÁREA SELECCIONADA</p>
-      <h3 id="txtAreaActual" style="color:var(--blue-light)">-</h3>
+      <h3 id="txtAreaActual" style="color:var(--blue-light); cursor:pointer;" onclick="reabrirConfig()" title="Clic para cambiar configuración">-</h3>
+      <p style="font-size:10px; color:var(--blue-mid); cursor:pointer; margin-top:4px;" onclick="reabrirConfig()">Cambiar Área / URL ⚙️</p>
     </div>
   </aside>
 
@@ -118,7 +122,7 @@
     <header>
       <div class="header-info">
         <p id="txtFechaActual">Cargando...</p>
-        <h2 id="txtTituloDashboard">Dashboard Financiero</h2>
+        <h2 id="txtTituloDashboard">Dashboard General</h2>
       </div>
       <div class="controls">
         <div class="month-selector" id="monthSelector">
@@ -155,71 +159,103 @@
 
     <div class="table-container">
       <div class="table-header">
-        <h3>Órdenes del Mes</h3>
+        <h3 id="tituloTabla">Órdenes del Mes</h3>
         <div style="display:flex; gap:10px;">
-          <select id="filtroTipo" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-family:inherit;">
+          <select id="filtroTipo" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-family:inherit;" onchange="renderOrdenes()">
+            <option value="">Todos los Tipos</option>
             <option value="Gasto">Gasto Corriente</option>
             <option value="Inversión">Inversión (CAPEX)</option>
           </select>
           <button class="btn-primary" onclick="nuevaOrden()">+ Nueva Orden</button>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Descripción</th>
-            <th>Tipo</th>
-            <th>Responsable</th>
-            <th>Disponible</th>
-            <th>Proyectado</th>
-            <th>Ejecutado</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody id="tbOrdenes">
-          </tbody>
-      </table>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Tipo</th>
+              <th>Responsable</th>
+              <th>Disponible</th>
+              <th>Proyectado</th>
+              <th>Ejecutado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tbOrdenes">
+            </tbody>
+        </table>
+      </div>
     </div>
   </main>
 </div>
 
 <script>
   // --- CONFIGURACIÓN GLOBAL ---
-  let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqKzK-eKkiJkqf9FmGmi6TrwyfDRdVSfm2faH2-jOSVbs5y4zDwnb9dwjINXZTfUNi/exec"
+  let SCRIPT_URL = localStorage.getItem('innova_url') || "";
   
   let state = {
     area: localStorage.getItem('innova_area') || '',
     ordenes: [],
-    mesIdx: new Date().getMonth(),
+    mesIdx: new Date().getMonth(), // Automáticamente toma el mes actual
     meses: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic']
   };
 
-  // --- INICIO ---
+  // --- INICIO DE LA APLICACIÓN ---
   window.onload = () => {
     initMonthSelector();
+    actualizarFecha();
+    
+    // Pre-llenar el formulario de configuración si ya existen datos
+    if (SCRIPT_URL) document.getElementById('cfgUrl').value = SCRIPT_URL;
+    if (state.area) document.getElementById('cfgArea').value = state.area;
+
+    // Si ya tenemos URL y Área, ocultamos el modal y cargamos datos
     if (SCRIPT_URL && state.area) {
       document.getElementById('configOverlay').style.display = 'none';
       document.getElementById('txtAreaActual').textContent = state.area;
       cargarDatos();
+    } else {
+      document.getElementById('configOverlay').style.display = 'flex';
     }
-    actualizarFecha();
   };
 
-  // --- LÓGICA DE CONEXIÓN ---
+  // --- NAVEGACIÓN Y UI ---
+  function reabrirConfig() {
+    document.getElementById('configOverlay').style.display = 'flex';
+  }
+
+  function cambiarSeccion(elemento, titulo) {
+    // Quitar clase activa de todos los botones del menú
+    const items = document.querySelectorAll('.nav-item');
+    items.forEach(item => item.classList.remove('active'));
+    
+    // Poner clase activa al seleccionado
+    elemento.classList.add('active');
+    
+    // Cambiar el título
+    document.getElementById('txtTituloDashboard').textContent = titulo;
+  }
+
+  // --- LÓGICA DE CONEXIÓN CON GOOGLE SHEETS ---
   async function api(action, extra = '') {
     try {
       show();
-      // CORRECCIÓN: Manejo correcto del signo '?' para evitar el Failed to fetch
-      const urlBase = SCRIPT_URL.includes('?') ? SCRIPT_URL : SCRIPT_URL + '?';
-      const response = await fetch(`${urlBase}&action=${action}${extra}`);
+      const cleanUrl = SCRIPT_URL.trim();
+      const connector = cleanUrl.includes('?') ? '&' : '?';
+      const finalUrl = cleanUrl + connector + "action=" + action + extra;
       
-      if (!response.ok) throw new Error('Error en la red');
+      const response = await fetch(finalUrl);
+      if (!response.ok) throw new Error('Error en la red (' + response.status + ')');
+      
       const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
       return data;
     } catch (error) {
       console.error("Error API:", error);
-      alert("Error de conexión. Verifica la URL del Script.");
+      alert("Error de conexión:\n" + error.message);
       throw error;
     } finally {
       hide();
@@ -230,7 +266,9 @@
     const url = document.getElementById('cfgUrl').value.trim();
     const area = document.getElementById('cfgArea').value;
 
-    if (!url || !area) return alert("Completa la URL y el Área.");
+    if (!url || !area) {
+      return alert("Por favor, completa la URL del Script y selecciona un Área.");
+    }
 
     SCRIPT_URL = url;
     state.area = area;
@@ -246,55 +284,56 @@
   // --- MANEJO DE DATOS ---
   async function cargarDatos() {
     try {
-      // Pedimos todas las órdenes de la base de datos
       const res = await api('getDatos');
       if (res.ok) {
         state.ordenes = res.rows;
+        console.log("Datos recibidos del Excel:", state.ordenes); // Útil para diagnosticar
         render();
       }
     } catch (e) {
-      console.error(e);
+      console.error("Fallo al cargar datos:", e);
     }
   }
 
   async function nuevaOrden() {
-    const tipo = document.getElementById('filtroTipo').value;
+    const tipo = document.getElementById('filtroTipo').value || 'Gasto';
     const desc = prompt("Descripción de la Orden:");
+    if (!desc) return; // Cancelado por el usuario
+    
     const responsable = prompt("Nombre del responsable:");
+    if (!responsable) return;
+    
     const monto = prompt("Monto a proyectar (S/):");
-
-    if (!desc || !monto || isNaN(monto)) return alert("Datos inválidos.");
+    if (!monto || isNaN(monto)) return alert("El monto ingresado no es un número válido.");
 
     try {
       const res = await api('crearOrden', 
-        `&tipo=${tipo}&desc=${encodeURIComponent(desc)}&responsable=${encodeURIComponent(responsable)}&monto=${monto}&mes=${state.mesIdx}&area=${encodeURIComponent(state.area)}`
+        `&tipo=${encodeURIComponent(tipo)}&desc=${encodeURIComponent(desc)}&responsable=${encodeURIComponent(responsable)}&monto=${monto}&mes=${state.mesIdx}&area=${encodeURIComponent(state.area)}`
       );
 
       if (res.ok) {
-        alert("Orden creada con éxito.");
-        await cargarDatos(); // RECARGA AUTOMÁTICA
+        alert("Orden " + res.codigo + " creada con éxito.");
+        await cargarDatos(); 
       }
     } catch (e) {
-      alert("Error al guardar.");
+      alert("No se pudo crear la orden.");
     }
   }
 
   async function ejecutarOrden(codigo) {
-    if(!confirm(`¿Ejecutar la orden ${codigo}? El monto pasará de Proyectado a Ejecutado.`)) return;
+    if(!confirm(`¿Ejecutar la orden ${codigo}?\nEl monto pasará de Proyectado a Ejecutado en el mes actual.`)) return;
     
     try {
       const res = await api('ejecutarOrden', `&codigo=${codigo}&mes=${state.mesIdx}`);
       if (res.ok) {
         await cargarDatos();
-      } else {
-        alert(res.error);
       }
     } catch (e) {
-      alert("Error al ejecutar.");
+      alert("Error al ejecutar la orden.");
     }
   }
 
-  // --- RENDERIZADO ---
+  // --- RENDERIZADO VISUAL ---
   function render() {
     renderStats();
     renderOrdenes();
@@ -302,9 +341,14 @@
 
   function renderStats() {
     const nombreMes = state.meses[state.mesIdx];
-    const ordsArea = state.ordenes.filter(o => o.Area === state.area);
+    
+    // Filtrar ignorando mayúsculas/minúsculas para evitar errores
+    const ordsArea = state.ordenes.filter(o => {
+      const areaExcel = String(o.Area || o.area || "").trim().toLowerCase();
+      const areaApp = String(state.area).trim().toLowerCase();
+      return areaExcel === areaApp;
+    });
 
-    // Sumamos los valores del mes específico
     let ini = 0, proy = 0, ejec = 0, disp = 0;
 
     ordsArea.forEach(o => {
@@ -322,39 +366,55 @@
 
   function renderOrdenes() {
     const nombreMes = state.meses[state.mesIdx];
-    // Filtramos por Área
-    const ords = state.ordenes.filter(o => o.Area === state.area);
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    
+    // Filtrar por Área y por Tipo
+    const ords = state.ordenes.filter(o => {
+      const areaExcel = String(o.Area || o.area || "").trim().toLowerCase();
+      const areaApp = String(state.area).trim().toLowerCase();
+      const coincideArea = areaExcel === areaApp;
+      
+      const tipoExcel = String(o['Gasto/Inversión'] || o.tipo || o.Tipo || "");
+      const coincideTipo = filtroTipo === "" || tipoExcel.includes(filtroTipo);
+      
+      return coincideArea && coincideTipo;
+    });
+
     const tbody = document.getElementById('tbOrdenes');
+    document.getElementById('tituloTabla').textContent = `Órdenes - ${nombreMes} 2026`;
 
     if (ords.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">No hay órdenes registradas para esta área.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">
+        No hay órdenes registradas para ${state.area} en el mes de ${nombreMes}.
+      </td></tr>`;
       return;
     }
 
     tbody.innerHTML = ords.map(o => {
       const p = Number(o['Proyectado_' + nombreMes] || 0);
       const e = Number(o['Ejecutado_' + nombreMes] || 0);
+      const codigo = o.Orden || o.orden || '-';
 
       return `
         <tr>
-          <td><strong>${o.Orden || '-'}</strong></td>
-          <td>${o.Descripcion_Orden || '-'}</td>
-          <td><span class="tag">${o['Gasto/Inversión'] || '-'}</span></td>
-          <td>${o.Responsable_De_Pago || '-'}</td>
+          <td><strong>${codigo}</strong></td>
+          <td>${o.Descripcion_Orden || o.descripcion || '-'}</td>
+          <td><span class="tag">${o['Gasto/Inversión'] || o.tipo || '-'}</span></td>
+          <td>${o.Responsable_De_Pago || o.responsable || '-'}</td>
           <td>${fmt(o.Disponible || 0)}</td>
           <td style="font-weight:600; color:var(--navy-light)">${fmt(p)}</td>
           <td style="font-weight:600; color:var(--green)">${fmt(e)}</td>
           <td>
             ${e > 0 
               ? '<span style="color:var(--green);font-weight:600">✓ EJECUTADO</span>' 
-              : `<button class="btn-ejecutar" onclick="ejecutarOrden('${o.Orden}')">Ejecutar</button>`}
+              : `<button class="btn-ejecutar" onclick="ejecutarOrden('${codigo}')">Ejecutar</button>`}
           </td>
         </tr>
       `;
     }).join('');
   }
 
-  // --- UTILIDADES ---
+  // --- UTILIDADES GLOBALES ---
   function initMonthSelector() {
     const container = document.getElementById('monthSelector');
     container.innerHTML = state.meses.map((m, idx) => `
@@ -377,7 +437,7 @@
   
   function actualizarFecha() {
     const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('txtFechaActual').textContent = new Date().toLocaleDateString('es-ES', opciones);
+    document.getElementById('txtFechaActual').textContent = new Date().toLocaleDateString('es-PE', opciones);
   }
 </script>
 
