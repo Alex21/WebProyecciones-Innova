@@ -77,6 +77,7 @@
   .search-bar input{flex:1;min-width:160px}
 
   /* TABLE */
+  <button onclick="nuevaOrden()" class="btn">➕ Nueva Orden</button>
   .ordenes-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;overflow-x:auto}
   .ordenes-wrap table{width:100%;border-collapse:collapse;min-width:700px}
   .ordenes-wrap thead tr{background:var(--navy)}
@@ -165,7 +166,7 @@
 
 <div id="cfg">
   <span>⚙ URL del Apps Script:</span>
-  <input id="urlInp" placeholder="https://script.google.com/macros/s/XXXXXX/exec">
+  <input id="urlInp" placeholder="https://script.google.com/macros/s/AKfycbynBt5xxRFdYeLOb1SnIlO22_K1NLWqa7IPwjxRS1bZw2fHol6xcpWLJFGM6ZpuIPbU/exec">
   <button onclick="conectar()">Conectar</button>
 </div>
 
@@ -467,7 +468,27 @@ function renderOrdenes(){
   if(ords.length===0){
     document.getElementById('tbOrdenes').innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">${state.ordenes.length===0?'Sin órdenes para esta área.':'Sin resultados.'}</td></tr>`;
     return;
+<button onclick="ejecutarOrden('${o.orden}')">💰 Ejecutar</button>
   }
+async function ejecutarOrden(codigo) {
+  const mes = state.mesIdx;
+
+  if (!confirm("¿Seguro que deseas ejecutar esta orden?")) return;
+
+  try {
+    const res = await api('ejecutarOrden',
+      `&codigo=${codigo}&mes=${mes}`
+    );
+
+    if (!res.ok) throw new Error(res.error);
+
+    alert("Ejecutado correctamente");
+
+    cargarDatos();
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
+}
 
   document.getElementById('tbOrdenes').innerHTML=ords.map(o=>{
     const pF=getVal(o,'PptoFin_',mesIdx);
@@ -566,7 +587,32 @@ async function guardar(){
   }
   btn.disabled=false;btn.textContent='Guardar en Google Sheets';
 }
+async function nuevaOrden() {
+  const desc = prompt("Descripción de la orden");
+  const tipo = prompt("Tipo: Gasto o Inversión");
+  const responsable = prompt("Responsable de pago");
+  const monto = prompt("Monto");
+  const mes = state.mesIdx; // usa el mes actual de tu app
 
+  if (!desc || !tipo || !monto) {
+    alert("Completa los datos");
+    return;
+  }
+
+  try {
+    const res = await api('crearOrden',
+      `&email=test@empresa.com&tipo=${tipo}&desc=${desc}&responsable=${responsable}&monto=${monto}&mes=${mes}`
+    );
+
+    if (!res.codigo) throw new Error(res.error || "Error");
+
+    alert("Orden creada: " + res.codigo);
+
+    cargarDatos(); // recarga todo
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
+}
 function renderHist(){
   document.getElementById('tbHist').innerHTML=state.historial.length===0
     ?'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Sin cambios en esta sesión</td></tr>'
