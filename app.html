@@ -324,17 +324,18 @@
           <label>Responsable de pago</label>
           <input type="text" id="noResp" placeholder="Nombre del responsable">
         </div>
+	
         <div class="no-field">
-          <label>PptoIni mensual (S/)</label>
-          <input type="number" id="noPpto" placeholder="0" min="0" step="1">
-        </div>
-      </div>
-      <div class="alert" id="noAlert"></div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="btn btn-p" id="btnCrearOrden" onclick="crearOrden()">Crear orden</button>
-        <button class="btn btn-s" onclick="cerrarNuevaOrden()">Cancelar</button>
-        <span style="font-size:11px;color:var(--text3)" id="noMsg"></span>
-      </div>
+  <label>Mes del presupuesto</label>
+  <select id="noMes">
+    <option value="0">Enero</option><option value="1">Febrero</option>
+    <option value="2">Marzo</option><option value="3">Abril</option>
+    <option value="4">Mayo</option><option value="5">Junio</option>
+    <option value="6">Julio</option><option value="7">Agosto</option>
+    <option value="8">Setiembre</option><option value="9">Octubre</option>
+    <option value="10">Noviembre</option><option value="11">Diciembre</option>
+  </select>
+</div>
     </div>
 
     <!-- PANEL PROYECTAR -->
@@ -678,14 +679,16 @@ function actualizarPreviewCodigo(){
 }
 
 async function crearOrden(){
-  const tipo = document.getElementById('noTipo').value;
-  const desc = document.getElementById('noDesc').value.trim();
+  const tipo  = document.getElementById('noTipo').value;
+  const desc  = document.getElementById('noDesc').value.trim();
   const fecha = document.getElementById('noFecha').value;
-  const resp = document.getElementById('noResp').value.trim();
-  const ppto = parseFloat(document.getElementById('noPpto').value) || 0;
-  const al = document.getElementById('noAlert');
+  const resp  = document.getElementById('noResp').value.trim();
+  const ppto  = parseFloat(document.getElementById('noPpto').value) || 0;
+  const mesIdx = parseInt(document.getElementById('noMes').value);  // ← nuevo
+  const al    = document.getElementById('noAlert');
 
   if (!desc) { al.className='alert a-err'; al.textContent='✕ La descripción es obligatoria.'; return; }
+  if (!ppto || ppto <= 0) { al.className='alert a-err'; al.textContent='✕ Ingresa un monto mayor a 0.'; return; }
 
   const btn = document.getElementById('btnCrearOrden');
   btn.disabled=true; btn.textContent='Creando...';
@@ -694,13 +697,13 @@ async function crearOrden(){
     const res = await post({
       action:'crearOrden', tipo, descripcion:desc,
       area:state.area, fecha, responsable:resp,
-      disponible:ppto*12, ppto_ini:ppto
+      mesIdx,        // ← nuevo
+      monto: ppto    // ← corregido (antes era ppto_ini)
     });
     if (!res.ok) throw new Error(res.error);
     al.className='alert a-ok';
-    al.textContent='✓ Orden '+res.codigo+' creada correctamente en PPTO 2026.';
+    al.textContent='✓ Orden '+res.codigo+' creada en Ordenes - Ppto Inicial.';
     document.getElementById('noMsg').textContent='';
-    // Recargar órdenes
     await cargarArea();
     setTimeout(()=>cerrarNuevaOrden(), 2000);
   } catch(err) {
